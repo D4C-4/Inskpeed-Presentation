@@ -1,0 +1,674 @@
+INKSPEED TRANSFER GUIDE
+Safe Windows installation, database setup, and portability testing
+
+This guide is for InkSpeed, a typing application with:
+- Python and Flask backend
+- React, TypeScript, and Vite frontend
+- Electron desktop window
+- MySQL or MariaDB database, normally supplied by XAMPP
+
+Read the database safety warnings before starting.
+
+======================================================================
+1. IMPORTANT SAFETY RULES
+======================================================================
+
+1. InkSpeed must use its own database name.
+2. Never point InkSpeed at a database used by another school project.
+3. Never delete or replace C:\xampp\mysql\data.
+4. Never drop, truncate, empty, or overwrite an existing database.
+5. Never import an old SQL file into an unknown database.
+6. Never copy the development laptop's .env file to another laptop.
+7. Never copy backend\.venv or frontend\node_modules to another laptop.
+8. Never stop a process unless its owner has been identified as InkSpeed.
+9. Do not change global Windows environment variables or XAMPP settings.
+10. If a database name already exists and its owner is uncertain, stop and use
+    another name.
+
+The backend creates the InkSpeed database and tables automatically when the
+configured database is new. It refuses to modify an existing database unless
+an explicit safety setting is added. A new laptop should not need that setting.
+
+======================================================================
+2. VERIFIED PROJECT FACTS
+======================================================================
+
+These facts were checked against the source files and scripts.
+
+Project repository:
+https://github.com/D4C-4/InkSpeed-Main
+
+Use the repository's default branch shown by GitHub. Do not guess a branch
+name if GitHub shows a different default branch.
+
+Required software:
+- Windows 10 or Windows 11, 64-bit.
+- Python 3.11 or newer. The tested environment used Python 3.14.8.
+- Node.js 20.19 or newer in the 20.x line, or Node.js 22.12 or newer.
+  Node.js 24.12.0 was tested successfully.
+- npm available with Node.js. npm 11.6.2 was tested successfully.
+- XAMPP, or another compatible local MySQL/MariaDB server.
+- VS Code is recommended but is not part of the application runtime.
+
+Database:
+- Host is normally 127.0.0.1.
+- Port is normally 3306.
+- The username and password must match the database server on that laptop.
+- XAMPP MySQL/MariaDB is required.
+- Apache is not required for InkSpeed itself. Apache is only needed for
+  phpMyAdmin or other PHP applications.
+
+Application ports:
+- MySQL/MariaDB: 3306, or the actual port configured on that laptop.
+- Flask API: 5000.
+- Electron Vite server: 5174.
+- Browser-mode Vite server: normally 5173.
+
+Existing startup files:
+- scripts\setup.bat creates the Python virtual environment, installs Python
+  packages, and runs npm ci for the frontend.
+- scripts\run_electron.bat starts the Electron application.
+- scripts\run_backend.bat starts only the backend.
+- scripts\run_frontend.bat starts browser-mode Vite.
+
+The normal first-time order is:
+1. Install and start the database service.
+2. Create a destination-specific .env file.
+3. Run scripts\setup.bat.
+4. Run scripts\run_electron.bat.
+
+The application works from a folder containing spaces. Its scripts use their
+own folder location, and the backend locates its files relative to the source
+file. Different Windows usernames and project folders are supported.
+
+The starter library contains 78 challenges in 8 categories:
+Proverbs, Nature, Technology, Literature, Science, Education, Health,
+and Business.
+
+======================================================================
+3. BEFORE TRANSFERRING FROM THE CURRENT LAPTOP
+======================================================================
+
+1. Use a web browser to open:
+   https://github.com/D4C-4/InkSpeed-Main
+
+2. Click Code, then Download ZIP.
+
+3. If you are preparing a copy for another laptop, do not transfer these
+   machine-specific or generated items:
+   - .env
+   - backend\.venv\
+   - frontend\node_modules\
+   - frontend\dist\
+   - frontend\coverage\
+   - database data folders
+   - backup folders
+
+4. The ZIP must contain these important items at its root:
+   README.md
+   .env.example
+   backend\
+   frontend\
+   database\
+   scripts\
+
+5. Do not transfer a copy of the XAMPP data folder. The destination laptop
+   must use its own MySQL/MariaDB service and its own InkSpeed database.
+
+6. If you want to preserve old InkSpeed users and results, make a verified
+   database backup separately. Do not copy raw files from the MySQL data
+   directory. A database backup and restore must be planned separately.
+
+======================================================================
+4. CHECK THE DESTINATION LAPTOP
+======================================================================
+
+Perform these checks in a VS Code PowerShell terminal or a normal PowerShell
+window. These commands only read information.
+
+1. Check Windows:
+
+   Get-ComputerInfo | Select-Object WindowsProductName,WindowsVersion,OsArchitecture
+
+2. Check Python:
+
+   python --version
+   py -3 --version
+
+   Python must be 3.11 or newer. If both commands fail, install Python from:
+   https://www.python.org/downloads/
+
+3. Check Node.js and npm:
+
+   node --version
+   npm --version
+
+   Node.js must be 20.19 or newer in the 20.x line, or 22.12 or newer.
+   Do not reinstall a working compatible version.
+
+4. Check whether XAMPP is installed:
+
+   Test-Path C:\xampp\xampp-control.exe
+
+   True means the usual XAMPP installation exists. If it is False, install
+   XAMPP from https://www.apachefriends.org/download.html, or use another
+   compatible MySQL/MariaDB server managed by your school environment.
+
+5. Open XAMPP Control Panel from the Windows Start menu. Check whether the
+   MySQL module is already green and running.
+
+   If it is running, do not stop it. InkSpeed can share the same server when
+   it uses a separate database.
+
+6. Check which process owns the database port:
+
+   Get-NetTCPConnection -LocalPort 3306 -State Listen |
+     Select-Object LocalAddress,LocalPort,OwningProcess
+
+   Identify the process before taking any action:
+
+   Get-Process -Id <PID>
+
+   Replace <PID> with the number displayed. Do not terminate an unknown
+   process. If the actual MySQL port is different, use that port in the
+   command and later in .env.
+
+7. Determine the database username and password from the existing XAMPP or
+   database administrator configuration. Do not reset credentials.
+
+   A typical fresh XAMPP installation uses:
+   Host: 127.0.0.1
+   Port: 3306
+   User: root
+   Password: empty
+
+   This is only an example. Use the actual values on the destination laptop.
+
+8. Check the InkSpeed application ports:
+
+   Get-NetTCPConnection -LocalPort 5000,5174 -State Listen |
+     Select-Object LocalAddress,LocalPort,OwningProcess
+
+   For every displayed PID:
+
+   Get-Process -Id <PID>
+
+   Do not stop another application's process. Close an old InkSpeed window or
+   terminal normally. If the owner is unknown, choose a time when the port is
+   free or ask the owner of that application.
+
+9. Check whether the proposed database name already exists. The safest method
+   is to open phpMyAdmin, select the server, and inspect the database list.
+   Choose a unique name such as:
+
+   inkspeed_presentation_db
+
+   Before using it, confirm that it does not already exist. If it exists or
+   its owner is uncertain, choose another name such as:
+
+   inkspeed_presentation_20261101
+
+   Multiple projects can share one MySQL server safely when each project uses
+   a separate database and the account has permission only as intended.
+
+======================================================================
+5. DOWNLOAD AND EXTRACT THE PROJECT
+======================================================================
+
+1. In a web browser, open:
+   https://github.com/D4C-4/InkSpeed-Main
+
+2. Click Code, then Download ZIP.
+
+3. Open Windows File Explorer and open Downloads.
+
+4. Right-click the downloaded ZIP and select Extract All.
+
+5. Extract it to a separate local folder, for example:
+
+   C:\InkSpeed-Main-main
+
+   Do not extract inside C:\Program Files. Do not run the application inside
+   the ZIP preview.
+
+6. If extraction creates:
+
+   C:\InkSpeed-Main-main\InkSpeed-Main-main\
+
+   open the inner folder that directly contains backend, frontend, scripts,
+   README.md, and .env.example.
+
+7. Open VS Code. Select File, Open Folder, and choose that correct folder.
+
+8. Open Terminal, New Terminal. Confirm the location:
+
+   Get-Location
+   Test-Path .\backend\main.py
+   Test-Path .\frontend\package.json
+   Test-Path .\frontend\package-lock.json
+
+   The last three commands must print True.
+
+======================================================================
+6. CREATE THE DESTINATION DATABASE CONFIGURATION
+======================================================================
+
+Perform these steps in the VS Code PowerShell terminal at the project root.
+
+1. Copy the tracked example configuration:
+
+   Copy-Item .env.example .env
+
+2. Open the new local file in Notepad:
+
+   notepad .env
+
+3. Set values that match the destination laptop. Example only:
+
+   MYSQL_HOST=127.0.0.1
+   MYSQL_PORT=3306
+   MYSQL_USER=root
+   MYSQL_PASSWORD=
+   MYSQL_DATABASE=inkspeed_presentation_db
+
+4. If the XAMPP/database account has a password, enter that password on the
+   MYSQL_PASSWORD line. Never copy the old laptop's .env file.
+
+5. If MySQL uses another port, enter that actual port in MYSQL_PORT.
+
+6. Use a new dedicated database name. Do not use a name belonging to another
+   project. Do not use the development laptop's recovered or test database.
+
+7. Save .env and close Notepad.
+
+8. For a new database, do not add MYSQL_ALLOW_EXISTING_DATABASE. The backend
+   will create the new database and initialize it.
+
+9. Only when reopening a database already verified to belong to InkSpeed may
+   you add:
+
+   MYSQL_ALLOW_EXISTING_DATABASE=1
+
+   Never use this setting to adopt another project's database.
+
+10. The backend automatically:
+    - creates the configured new database;
+    - creates the tables and lookup data;
+    - applies its additive initialization checks;
+    - inserts achievements;
+    - inserts the 78 starter challenges without duplicating matching passages.
+
+11. Do not import database\inkspeed_schema.sql or backend\database\seed.sql
+    blindly. They are reference/legacy SQL files, not the normal fresh-install
+    procedure.
+
+======================================================================
+7. INSTALL DEPENDENCIES
+======================================================================
+
+1. In the VS Code PowerShell terminal, confirm you are at the project root:
+
+   Get-Location
+
+2. Confirm the files:
+
+   Test-Path .\backend\main.py
+   Test-Path .\frontend\package.json
+   Test-Path .\frontend\package-lock.json
+
+3. Run the existing setup script:
+
+   .\scripts\setup.bat
+
+4. The script checks Python and Node.js, creates backend\.venv, installs
+   backend\requirements.txt, and runs npm ci using frontend\package-lock.json.
+   It also recreates frontend\node_modules when necessary.
+
+5. Successful output includes:
+
+   [OK] Python dependencies installed.
+   [OK] Frontend dependencies installed.
+   Setup complete
+
+6. npm may display package deprecation or audit warnings. Do not run
+   npm audit fix --force during installation. It can change dependency versions
+   and is outside this transfer procedure.
+
+7. If setup fails, read the first error. Check the matching item in Section 10.
+   Do not copy a virtual environment or node_modules from another laptop as a
+   shortcut.
+
+======================================================================
+8. START INKSPEED
+======================================================================
+
+1. Open XAMPP Control Panel from the Windows Start menu.
+
+2. Confirm MySQL/MariaDB is green and running. Do not start a second database
+   server on the same port.
+
+3. Apache is not needed for the Electron application. Start Apache only if
+   you need phpMyAdmin.
+
+4. In the VS Code PowerShell terminal at the project root, run:
+
+   .\scripts\run_electron.bat
+
+   Alternatively, from the frontend folder:
+
+   cd frontend
+   npm run electron
+
+5. Electron starts the backend and Vite on 5000 and 5174, waits for both, and
+   opens the InkSpeed desktop window.
+
+6. If the backend starts but the window does not open, test:
+
+   Invoke-WebRequest -UseBasicParsing http://127.0.0.1:5000/api/health
+
+   A working backend returns HTTP 200 and:
+
+   {"ok":true}
+
+7. Close the Electron window normally when finished. It stops only the child
+   processes started by that window. Do not use a broad process-kill command.
+
+======================================================================
+9. VERIFY THE DATABASE
+======================================================================
+
+1. If using phpMyAdmin, start Apache and MySQL in XAMPP, then open a browser:
+
+   http://localhost/phpmyadmin
+
+2. Select the exact database name from .env. Never select another project's
+   database.
+
+3. Use the SQL tab only for these read-only checks:
+
+   SELECT COUNT(*) AS challenge_count FROM challenges;
+
+   SELECT COUNT(DISTINCT category) AS category_count FROM challenges;
+
+   SELECT COUNT(*) AS user_count FROM users;
+
+   SELECT COUNT(*) AS result_count FROM results;
+
+   SELECT COUNT(*) AS achievement_count FROM achievements;
+
+4. A new database should report:
+   - challenge_count: 78
+   - category_count: 8
+   - user_count: 0 before creating a profile
+
+5. After a typing test, result_count should increase. Related rows may appear
+   in round_results, user_achievements, and personal_bests.
+
+6. Do not run DROP, DELETE, TRUNCATE, ALTER, UPDATE, or INSERT in phpMyAdmin
+   as part of this guide.
+
+======================================================================
+10. COMPLETE FUNCTIONALITY TEST
+======================================================================
+
+These checks require manual testing in the Electron window.
+
+[ ] The desktop window opens.
+[ ] The main player/profile screen loads.
+[ ] A profile can be created with a valid 4-to-20-character username.
+[ ] Challenges load.
+[ ] Classic mode starts and displays a timer.
+[ ] Classic mode accepts typing and displays accuracy and WPM.
+[ ] Memory Rush hides the passage and allows rounds to be completed.
+[ ] Key Chaos starts with scrambled keys and accepts typing.
+[ ] A result screen appears after a completed mode.
+[ ] The result saves without an error.
+[ ] History shows the saved result.
+[ ] Leaderboard displays saved results.
+[ ] Achievements displays available/unlocked achievements.
+[ ] Closing and reopening the application works.
+
+The implemented modes are Classic, Memory Rush, and Key Chaos. The application
+has History, Leaderboard, Achievements, and Challenges screens. UI typing,
+timer, WPM, and result persistence require manual interaction.
+
+======================================================================
+11. SAFE PORTABILITY TEST ON THE CURRENT LAPTOP
+======================================================================
+
+This is a clean-install simulation. It uses a separate folder and database.
+It must not use the original .env, backend\.venv, frontend\node_modules, or
+any existing database.
+
+The tested temporary folder was:
+
+C:\Users\MY PC\Downloads\InkSpeed-Portability-Test-20261101
+
+The temporary database created for the test was:
+
+inkspeed_portability_20261101
+
+The temporary folder was removed after testing. The dedicated test database
+was left in place so it is not confused with another project's database.
+Remove it later only after confirming it is no longer needed.
+
+To repeat the test safely:
+
+1. Create a clean copy of the project in C:\InkSpeed-Portability-Test.
+   Exclude .env, backend\.venv, frontend\node_modules, database data folders,
+   logs, and generated build folders.
+
+2. Create a new .env in that copy with:
+
+   MYSQL_HOST=127.0.0.1
+   MYSQL_PORT=3306
+   MYSQL_USER=root
+   MYSQL_PASSWORD=
+   MYSQL_DATABASE=inkspeed_portability_test_YYYYMMDD
+
+   Replace YYYYMMDD with a date and first confirm the name does not exist.
+
+3. From the clean copy's root, run:
+
+   .\scripts\setup.bat
+
+4. Start the backend:
+
+   cd backend
+   .\.venv\Scripts\python.exe main.py
+
+5. In another VS Code terminal, check:
+
+   Invoke-WebRequest -UseBasicParsing http://127.0.0.1:5000/api/health
+
+6. If the response is HTTP 200 with {"ok":true}, open the Electron launcher
+   from the clean copy and perform the manual checklist in Section 10.
+
+7. Verify the test database with the read-only queries in Section 9.
+
+Test results from the current laptop (2026-11-01):
+
+PASS - A fresh ZIP-style copy was created at
+       C:\Users\MY PC\Downloads\InkSpeed-Portability-Test-20261101 with
+       .env, backend\.venv, and frontend\node_modules excluded.
+PASS - The copy contained the required source files, .env.example, and
+       frontend\package-lock.json.
+PASS - scripts\setup.bat completed successfully in the clean copy.
+PASS - A new backend virtual environment was created and Python dependencies
+       installed from requirements.txt.
+PASS - npm ci installed 560 frontend packages from package-lock.json.
+PASS - Frontend lint completed with 0 errors and 6 existing warnings.
+PASS - Frontend production build completed successfully.
+PASS - challenge_seed.json contains 78 entries and 8 unique categories.
+PASS - With MySQL/MariaDB running, the isolated backend created the dedicated
+       database inkspeed_portability_20261101.
+PASS - /api/health returned HTTP 200 with {"ok":true}.
+PASS - /api/state returned 78 challenges, 0 users, and 0 results.
+PASS - Repeat initialization succeeded after explicitly setting
+       MYSQL_ALLOW_EXISTING_DATABASE=1 for the verified InkSpeed test
+       database. Without that opt-in, the safety refusal is expected.
+NOT TESTED - Electron window and manual typing checks because port 5174 was
+             already held by an existing Vite process.
+
+The clean-copy setup, dependency, lint, build, database initialization, API
+health, and seeded-state results support ZIP portability. Repeat the Electron
+and manual typing checks when port 5174 is free or confirmed to belong to
+InkSpeed. The temporary test database remains separate from other databases;
+remove it later only after confirming it is no longer needed.
+
+======================================================================
+12. TROUBLESHOOTING
+======================================================================
+
+Python not found:
+1. Meaning: Python is missing or not on PATH.
+2. Check: python --version and py -3 --version.
+3. Safe action: install Python 3.11 or newer, then reopen VS Code.
+4. Stop if your school-managed Python installation cannot be changed.
+
+Node.js not found or incompatible:
+1. Meaning: Node.js is missing or below the Vite requirement.
+2. Check: node --version.
+3. Safe action: install a compatible Node.js LTS version and reopen VS Code.
+4. Do not change another project's package files.
+
+npm ci fails:
+1. Meaning: Node.js is unavailable, the lockfile is incomplete, or the
+   network/cache cannot provide packages.
+2. Check that frontend\package-lock.json exists and run npm --version.
+3. Run npm ci again from the frontend folder after fixing the reported cause.
+4. Do not delete the lockfile or run npm install --force.
+
+.env is missing:
+1. Meaning: the backend is using defaults or cannot use the intended settings.
+2. Run Copy-Item .env.example .env at the project root.
+3. Edit only the new destination .env.
+4. Never copy the old laptop's .env.
+
+Incorrect database credentials:
+1. Meaning: the server rejected the configured user/password.
+2. Check MYSQL_HOST, MYSQL_PORT, MYSQL_USER, and MYSQL_PASSWORD against the
+   actual XAMPP/database account.
+3. Ask the database owner for the correct credentials. Do not reset them.
+
+MySQL/MariaDB will not start:
+1. Meaning: the service is stopped, damaged, or its port is occupied.
+2. Check XAMPP's MySQL log and the port owner with Get-NetTCPConnection.
+3. Start the already-installed correct service or use its actual port.
+4. Never delete C:\xampp\mysql\data.
+
+Database port conflict:
+1. Identify the owner with Get-Process -Id <PID>.
+2. Do not terminate an unknown process.
+3. If allowed by the owner, use the existing server and set MYSQL_PORT to its
+   actual port. Do not change global XAMPP configuration for InkSpeed alone.
+
+Database initialization error:
+1. Read the backend terminal message.
+2. Confirm MySQL is running and the database name is unique.
+3. For an existing database, confirm it belongs to InkSpeed before adding
+   MYSQL_ALLOW_EXISTING_DATABASE=1.
+4. Stop if ownership, corruption, or compatibility is uncertain.
+
+Missing tables or challenges:
+1. Confirm the backend is using the intended .env and database.
+2. Restart the backend so initialization and seeding can run.
+3. Check the read-only counts in Section 9.
+4. Do not manually import old SQL into an unknown database.
+
+Port 5000 is occupied:
+1. Meaning: another API or application owns the backend port.
+2. Identify it with Get-NetTCPConnection and Get-Process.
+3. Close only a confirmed old InkSpeed backend through its normal window or
+   terminal. Otherwise leave it running and ask its owner.
+
+Port 5174 is occupied:
+1. Meaning: another Vite server or an old InkSpeed Vite child is running.
+2. Identify the owner with:
+   Get-NetTCPConnection -LocalPort 5174 -State Listen
+   Get-Process -Id <PID>
+3. Do not terminate an unknown process. Close the owning application normally.
+
+Electron fails to open:
+1. Run the backend directly from the project root:
+   .\backend\.venv\Scripts\python.exe .\backend\main.py
+2. Read the actual Python error.
+3. Check MySQL, .env, port 5000, and port 5174.
+4. Stop if the error concerns another application's process.
+
+Backend/frontend communication fails:
+1. Check http://127.0.0.1:5000/api/health in a browser.
+2. Check that the Electron Vite page is using port 5174.
+3. Restart only InkSpeed after correcting the cause.
+
+Results do not save:
+1. Confirm a player profile is selected.
+2. Confirm the result meets the application's validation rules.
+3. Check the backend terminal and the database result_count.
+4. Do not edit database rows manually to force a result.
+
+======================================================================
+13. DAILY STARTUP
+======================================================================
+
+1. Open XAMPP Control Panel.
+2. Confirm MySQL/MariaDB is running.
+3. Open VS Code in the InkSpeed project folder.
+4. Open Terminal, New Terminal.
+5. Run:
+
+   .\scripts\run_electron.bat
+
+Do not run setup.bat again unless dependencies are missing or the project was
+updated and setup is intentionally required.
+
+======================================================================
+14. FINAL PRESENTATION CHECKLIST
+======================================================================
+
+[ ] Laptop and charger packed.
+[ ] InkSpeed project folder is present.
+[ ] Destination .env exists and has the correct database name.
+[ ] The database name is dedicated to InkSpeed.
+[ ] XAMPP MySQL/MariaDB starts normally.
+[ ] Apache is started only if phpMyAdmin is needed.
+[ ] Port 5000 is available for InkSpeed.
+[ ] Port 5174 is available for InkSpeed.
+[ ] scripts\run_electron.bat opens the desktop window.
+[ ] A profile can be created.
+[ ] A Classic typing test completes.
+[ ] A result is displayed and saved.
+[ ] History shows the result.
+[ ] The database shows 78 challenges and 8 categories.
+[ ] Presentation materials and any approved backup are packed.
+
+======================================================================
+15. AUDIT SUMMARY
+======================================================================
+
+The project is portable based on the clean-copy setup, dependency, lint, and
+frontend build tests. It uses path-relative scripts and does not require the
+original laptop's folder name or Windows username. The ZIP must include
+frontend\package-lock.json; setup intentionally recreates backend\.venv and
+frontend\node_modules instead of transferring them.
+
+Existing BAT files are sufficient for normal setup and startup:
+setup.bat followed by run_electron.bat.
+
+The main coexistence risks are:
+- choosing a database name owned by another project;
+- using the wrong MySQL port or credentials;
+- port 5000 or 5174 being owned by another application;
+- trying to reuse copied virtual-environment or node_modules folders.
+
+The current laptop's isolated database test could not finish because MySQL was
+unavailable during the test. Electron was not marked as passed because port
+5174 was occupied by an existing Vite process. These are manual follow-up
+checks, not hidden successes.
+
+No application source, schema, migration, seed, dependency, .env, or
+.env.example file was modified during this audit. The setup helper was updated
+only to clarify that an existing compatible database service may remain
+running. This guide is the single Notepad installation document:
+
+INKSPEED_TRANSFER_GUIDE.txt
